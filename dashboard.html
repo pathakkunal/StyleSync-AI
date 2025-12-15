@@ -412,7 +412,7 @@ SKU: JK-2024-WTR"></textarea>
 
             try {
                 // Determine API URL - expecting localhost for this demo
-                const response = await fetch('http://localhost:8000/generate-catalog', {
+                const response = await fetch('/generate-catalog', {
                     method: 'POST',
                     body: formData
                 });
