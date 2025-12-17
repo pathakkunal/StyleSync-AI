@@ -45,8 +45,18 @@ class VisualAnalyst:
             )
             
             # 4. Clean and Parse JSON
-            text_response = response.text.replace('```json', '').replace('```', '').strip()
-            return json.loads(text_response)
+            # 4. Clean and Parse JSON
+            # Robust extraction of JSON content
+            content = response.text
+            if "```" in content:
+                import re
+                # Find content between ```json (or just ```) and ```
+                match = re.search(r"```(?:json)?\s*(.*?)```", content, re.DOTALL)
+                if match:
+                    content = match.group(1)
+            
+            cleaned_text = content.strip()
+            return json.loads(cleaned_text)
         except Exception as e:
             print(f"❌ Vision Error: {e}")
             # Return a Safe Fallback (Simulation)
