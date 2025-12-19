@@ -8,6 +8,6 @@ langchain-groq
 pinecone>=3.0.0
 pydantic
 python-dotenv
-google-generativeai>=0.7.2
+google-generativeai>=0.8.3
 groq
 Pillow
