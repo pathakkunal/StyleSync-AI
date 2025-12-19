@@ -1,70 +1,67 @@
+import google.generativeai as genai
 import os
 import json
 import asyncio
-import google.generativeai as genai
-from PIL import Image
 from dotenv import load_dotenv
 
 load_dotenv()
 
 class VisualAnalyst:
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
-        if not api_key:
-            print("⚠️ GEMINI_API_KEY missing")
-
-        genai.configure(api_key=api_key)
-        # Use the modern, faster Flash model
+        self.api_key = os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            raise ValueError("GEMINI_API_KEY not found in environment variables")
+        genai.configure(api_key=self.api_key)
+        # UPDATED: Using the stable model version
         self.model = genai.GenerativeModel('gemini-1.5-flash')
 
     async def analyze_image(self, image_path: str):
-        print(f"👁️ Analyzing image: {image_path}")
+        # Read file as bytes to match the user's logic requirements
+        try:
+            with open(image_path, "rb") as f:
+                image_bytes = f.read()
+        except Exception as e:
+             return {
+                "main_color": "Error",
+                "product_type": "File Read Error",
+                "design_style": "Error",
+                "visual_features": [f"Could not read file: {str(e)}"]
+            }
+
+        prompt = (
+            "Analyze this product image for an e-commerce listing. "
+            "detailed visual attributes including: Main Color, Material/Texture, Style/Vibe, "
+            "and 3 distinct Visual Features. Return the result strictly as a JSON object "
+            "with keys: main_color, product_type, design_style, visual_features."
+        )
         
         try:
-            # 1. Load image properly with Pillow (Fixes format issues)
-            img = Image.open(image_path)
-            
-            # 2. Define the prompt
-            prompt = """
-            Analyze this product image for an e-commerce listing.
-            Return ONLY a raw JSON object (no markdown formatting) with this structure:
-            {
-                "main_color": "string",
-                "product_type": "string",
-                "design_style": "string (minimalist, streetwear, vintage, etc)",
-                "visual_features": ["list", "of", "visible", "features"],
-                "suggested_title": "creative product title",
-                "condition_guess": "new/used"
-            }
-            """
-            
-            # 3. Run in a thread to prevent blocking (Sync to Async wrapper)
+            # Run blocking call in thread
             response = await asyncio.to_thread(
                 self.model.generate_content,
-                [prompt, img]
+                [
+                    {'mime_type': 'image/jpeg', 'data': image_bytes},
+                    prompt
+                ]
             )
             
-            # 4. Clean and Parse JSON
-            # 4. Clean and Parse JSON
-            # Robust extraction of JSON content
-            content = response.text
-            if "```" in content:
-                import re
-                # Find content between ```json (or just ```) and ```
-                match = re.search(r"```(?:json)?\s*(.*?)```", content, re.DOTALL)
-                if match:
-                    content = match.group(1)
+            text_response = response.text
             
-            cleaned_text = content.strip()
-            return json.loads(cleaned_text)
+            # Clean up markdown code blocks if present
+            if text_response.startswith('```json'):
+                text_response = text_response[7:]
+            if text_response.startswith('```'):
+                text_response = text_response[3:]
+            if text_response.endswith('```'):
+                text_response = text_response[:-3]
+                
+            return json.loads(text_response.strip())
         except Exception as e:
-            print(f"❌ Vision Error: {e}")
-            # Return a Safe Fallback (Simulation)
+            print(f"⚠️ API Error: {e}")
+            # Return a clearer error for debugging
             return {
                 "main_color": "Unknown",
                 "product_type": "Unidentified Item",
                 "design_style": "Standard",
-                "visual_features": ["Error analyzing image"],
-                "suggested_title": "Manual Review Needed",
-                "condition_guess": "New"
+                "visual_features": [f"Error: {str(e)}"]
             }
