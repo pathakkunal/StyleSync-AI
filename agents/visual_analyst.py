@@ -1,7 +1,6 @@
-import google.generativeai as genai
 import os
 import json
-import asyncio
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,70 +12,48 @@ class VisualAnalyst:
             raise ValueError("GEMINI_API_KEY not found")
         
         genai.configure(api_key=self.api_key)
-        
-        print("🔍 Checking available Gemini models...")
-        try:
-            my_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-            print(f"📋 Available Models: {my_models}")
-            
-            # UPDATED PRIORITY: GEMINI 2.0 FIRST
-            preferred_order = [
-                'models/gemini-2.0-flash-exp',  # <--- Newest & Smartest (Available in logs)
-                'models/gemini-1.5-pro',
-                'models/gemini-1.5-pro-001',
-                'models/gemini-1.5-flash',
-                'models/gemini-1.5-flash-001',
-                'models/gemini-pro-vision'
-            ]
-            
-            selected_model = "models/gemini-2.0-flash-exp" # Default to the new one
-            
-            for model_name in preferred_order:
-                if model_name in my_models:
-                    selected_model = model_name
-                    break
-            
-            print(f"✅ Selected Vision Model: {selected_model}")
-            self.model = genai.GenerativeModel(selected_model)
-            
-        except Exception as e:
-            print(f"⚠️ Model list failed ({e}), defaulting to gemini-2.0-flash-exp")
-            self.model = genai.GenerativeModel('models/gemini-2.0-flash-exp')
+        self.model_name = "models/gemini-flash-latest"
+        self.model = genai.GenerativeModel(self.model_name)
+        print(f"✅ VisualAnalyst stored Gemini model: {self.model_name}")
 
-    async def analyze_image(self, image_path: str):
-        # Adaptation: Read file path to bytes, as main.py passes a path
+    def analyze_image(self, image_path: str):
         try:
-            with open(image_path, "rb") as f:
-                image_bytes = f.read()
-        except Exception as e:
-            print(f"❌ File Read Error: {e}")
-            return {
-                "main_color": "Unknown",
-                "visual_features": [f"Error reading file: {str(e)}"]
-            }
-
-        prompt = (
-            "Analyze this product image for an e-commerce listing. "
-            "Return a JSON object with keys: main_color, product_type, design_style, visual_features."
-        )
-        try:
-            # Adaptation: Run in thread to allow async await
-            response = await asyncio.to_thread(
-                self.model.generate_content,
-                [
-                    {'mime_type': 'image/jpeg', 'data': image_bytes},
-                    prompt
-                ]
+            # Upload the file to Gemini
+            # Note: For efficiency in production, files should be managed (uploads/deletes)
+            # but for this agentic flow, we'll upload per request or assume local path usage helper if needed.
+            # However, the standard `model.generate_content` can take PIL images or file objects directly for some sdk versions,
+            # but using the File API is cleaner for 1.5 Flash multi-modal.
+            # Let's use the simpler PIL integration if available, or just path if the SDK supports it.
+            # actually, standard genai usage for images usually involves PIL or uploading.
+            # Let's try the PIL approach first as it's often more direct for local scripts.
+            import PIL.Image
+            img = PIL.Image.open(image_path)
+            
+            user_prompt = (
+                "Analyze this product image. "
+                "Return ONLY valid JSON with keys: main_color, product_type, design_style, visual_features."
             )
             
-            text = response.text
-            if text.startswith('```json'): text = text[7:]
-            if text.endswith('```'): text = text[:-3]
+            # Gemini 1.5 Flash supports JSON response schema, but simple prompting often works well too.
+            # We'll stick to prompt engineering for now to match the "Return ONLY valid JSON" instruction.
+            response = self.model.generate_content([user_prompt, img])
             
-            return json.loads(text.strip())
+            response_text = response.text
+            
+            # Clean up potential markdown code fences
+            cleaned_content = response_text
+            if "```json" in cleaned_content:
+                cleaned_content = cleaned_content.replace("```json", "").replace("```", "")
+            elif "```" in cleaned_content:
+                 cleaned_content = cleaned_content.replace("```", "")
+            
+            return json.loads(cleaned_content.strip())
+
         except Exception as e:
             print(f"❌ Analysis Failed: {e}")
             return {
                 "main_color": "Unknown",
+                "product_type": "Unknown", 
+                "design_style": "Unknown",
                 "visual_features": [f"Error: {str(e)}"]
             }
