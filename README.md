@@ -1,3 +1,12 @@
+---
+title: MerchFlow AI
+emoji: 👟
+colorFrom: blue
+colorTo: purple
+sdk: docker
+pinned: false
+---
+
 # MerchFlow AI - Open Source E-Commerce Agent
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
