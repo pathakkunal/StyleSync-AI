@@ -8,3 +8,5 @@ RUN mkdir -p /tmp/home
 ENV HOME=/tmp/home
 # Start the FastAPI server on port 7860 (required by Hugging Face)
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "7860"]
+
+# Force Rebuild: Final Polish v1.0
