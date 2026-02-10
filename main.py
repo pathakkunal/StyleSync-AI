@@ -1,121 +1,89 @@
 import os
 import httpx
 import asyncio
-import json
-import traceback
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from dotenv import load_dotenv
 
-# Import Agents
+# Import Phase 2 & 3 Agents
 from agents.visual_analyst import VisualAnalyst
 from agents.memory_agent import MemoryAgent
 from agents.writer_agent import WriterAgent
 
 load_dotenv()
-
 app = FastAPI()
 
-# Initialize Agents
+# --- Global Agent Initialization ---
+print("🚀 StyleSync AI: Initializing Agents...")
 try:
     visual_agent = VisualAnalyst()
-    memory_agent = MemoryAgent()
+    memory_agent = MemoryAgent() # Connects to 'stylesync-index-v2'
     writer_agent = WriterAgent()
-    
-    # Try seeding database, but don't crash if it fails (optional robustness)
-    try:
-        memory_agent.seed_database()
-    except Exception as e:
-        print(f"⚠️ Memory Agent Seed Warning: {e}")
-        
-    print("✅ All Agents Online")
+    print("✅ All Agents Online & Ready.")
 except Exception as e:
-    print(f"❌ Agent Startup Failed: {e}")
-    # We continue, but endpoints might fail if agents aren't ready.
+    print(f"❌ Critical Startup Error: {e}")
 
 @app.get("/", response_class=HTMLResponse)
 async def read_root():
     try:
-        with open("dashboard.html", "r") as f:
+        with open("dashboard.html", "r", encoding="utf-8") as f:
             return f.read()
     except FileNotFoundError:
-        return "<h1>Error: dashboard.html not found</h1>"
+        return "<h1>Error: dashboard.html not found. Run setup scripts first.</h1>"
 
 @app.post("/generate-catalog")
 async def generate_catalog(file: UploadFile = File(...)):
-    file_path = None
+    file_path = f"temp_{file.filename}"
     try:
-        # 1. Save Temp File
-        os.makedirs("uploads", exist_ok=True)
-        file_path = f"uploads/{file.filename}"
+        # 1. Save File Temporarily
         with open(file_path, "wb") as f:
             f.write(await file.read())
         
-        # 2. Run AI Pipeline (Sequential)
-        print("▶️ Starting Visual Analysis...")
+        # 2. Vision (The Eyes)
+        print(f"👁️ Analyzing: {file.filename}")
         visual_data = await visual_agent.analyze_image(file_path)
         
-        print("▶️ Retrieving Keywords...")
-        query = f"{visual_data.get('main_color', '')} {visual_data.get('product_type', 'product')}"
-        seo_keywords = memory_agent.retrieve_keywords(query)
+        # 3. Memory (The Context)
+        # Create a search query from visual tags
+        search_query = f"{visual_data.get('design_style', '')} {visual_data.get('product_type', '')}"
+        print(f"🧠 Recalling trends for: {search_query}")
+        seo_keywords = memory_agent.retrieve_keywords(search_query)
         
-        print("▶️ Writing Listing...")
+        # 4. Writer (The Brain)
+        print("✍️ Drafting copy...")
         listing = writer_agent.write_listing(visual_data, seo_keywords)
         
-        # 3. Construct Final Payload
-        final_data = {
-            "visual_data": visual_data,
-            "seo_keywords": seo_keywords,
-            "listing": listing
+        # 5. Construct Payload
+        response_data = {
+            "status": "success",
+            "visual_analysis": visual_data,
+            "market_trends": seo_keywords,
+            "final_listing": listing
         }
         
-        # 4. Async N8n Trigger (Before Return)
-        # Constraint: "Must happen after agents finish but before returning"
+        # 6. Automation Trigger (n8n)
         n8n_url = os.getenv("N8N_WEBHOOK_URL")
         if n8n_url:
-            print(f"🚀 Triggering N8N Webhook: {n8n_url}")
-            await trigger_n8n_webhook(n8n_url, final_data)
-        else:
-            print("ℹ️ N8N_WEBHOOK_URL not set, skipping webhook.")
+            asyncio.create_task(trigger_webhook(n8n_url, response_data))
             
-        return JSONResponse(content=final_data)
+        return JSONResponse(content=response_data)
 
     except Exception as e:
-        error_details = traceback.format_exc()
-        print(f"❌ Error in generate-catalog: {e}")
-        print(error_details)
-        return JSONResponse(
-            content={
-                "error": str(e),
-                "type": type(e).__name__,
-                "details": error_details
-            },
-            status_code=500
-        )
-        
+        print(f"❌ Pipeline Error: {e}")
+        return JSONResponse(content={"error": str(e)}, status_code=500)
     finally:
-        # Cleanup
-        if file_path and os.path.exists(file_path):
-            try:
-                os.remove(file_path)
-            except Exception as cleanup_error:
-                print(f"⚠️ Cleanup Warning: {cleanup_error}")
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
-async def trigger_n8n_webhook(url: str, data: dict):
-    """
-    Sends data to n8n webhook asynchronously using httpx.
-    """
-    async with httpx.AsyncClient() as client:
-        try:
-            # We await the post to ensure it's sent before returning, 
-            # fulfilling the user constraint.
-            response = await client.post(url, json=data, timeout=10.0)
-            response.raise_for_status()
-            print(f"✅ N8N Webhook Success: {response.status_code}")
-        except httpx.HTTPStatusError as e:
-             print(f"❌ N8N Webhook HTTP Error: {e.response.status_code} - {e.response.text}")
-        except Exception as e:
-            print(f"❌ N8N Webhook Connection Failed: {e}")
+async def trigger_webhook(url, data):
+    """Fire-and-forget webhook to n8n"""
+    try:
+        async with httpx.AsyncClient() as client:
+            await client.post(url, json=data, timeout=5.0)
+            print(f"🚀 Webhook sent to n8n")
+    except Exception as e:
+        print(f"⚠️ Webhook failed: {e}")
 
 if __name__ == "__main__":
     import uvicorn

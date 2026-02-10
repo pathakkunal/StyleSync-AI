@@ -4,7 +4,7 @@ import subprocess
 import platform
 
 def main():
-    print("🚀 Starting Merch Flow AI...")
+    print("🚀 Starting StyleSync AI AI AI AI AI AI...")
 
     # 1. Auto-Detect OS and define venv paths
     system = platform.system()

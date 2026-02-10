@@ -10,7 +10,7 @@ def upload_secrets():
     # Load environment variables from .env file
     load_dotenv()
     
-    space_id = "Bhishaj/MerchFlow-AI"
+    space_id = "Bhishaj/StyleSync AI AI AI AI-AI"
     keys_to_upload = ["GROQ_API_KEY", "PINECONE_API_KEY", "GOOGLE_API_KEY"]
     
     print(f"Configuring secrets for Space: {space_id}")

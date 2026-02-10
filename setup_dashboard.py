@@ -67,7 +67,7 @@ def automate_dashboard_setup():
             const fileName = fileInput.files[0].name;
             const pText = dropZone.querySelector('p.text-lg') || dropZone.querySelector('p');
             if(pText) pText.textContent = "File Selected: " + fileName;
-            dropZone.classList.add('border-primary');
+            dropZone.classList.add('border-emerald-500');
         }
     });
 
@@ -115,7 +115,7 @@ def automate_dashboard_setup():
             let cls = 'text-purple-400';
             if (/^"/.test(match)) {
                 if (/:$/.test(match)) {
-                    cls = 'text-primary';
+                    cls = 'text-emerald-500';
                 } else {
                     cls = 'text-sky-300';
                 }

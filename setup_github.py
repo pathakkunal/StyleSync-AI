@@ -38,11 +38,11 @@ def main():
     run_command("git add .", "Stage all files")
 
     # 4. Commit
-    run_command('git commit -m "Initial launch: MerchFlow AI Enterprise Edition"', "Commit files")
+    run_command('git commit -m "Initial launch: StyleSync AI AI AI AI AI Enterprise Edition"', "Commit files")
 
     # 5. Create GitHub Repo
     # We ignore error here if it fails assuming it might exist, or let the user see the gh output
-    run_command("gh repo create MerchFlow-AI --public --source=. --remote=origin", "Create GitHub Repo")
+    run_command("gh repo create StyleSync AI AI AI AI-AI --public --source=. --remote=origin", "Create GitHub Repo")
 
     # 6. Push to origin
     run_command("git push -u origin main", "Push to GitHub")

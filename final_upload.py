@@ -34,7 +34,7 @@ def main():
         print("Committing files...")
         try:
             # Use check=True so it raises exception on failure, which we catch
-            run_command('git commit -m "Initial commit - MerchFlow AI"', check=True)
+            run_command('git commit -m "Initial commit - StyleSync AI AI AI AI AI"', check=True)
         except subprocess.CalledProcessError:
             print("Commit failed (likely nothing to commit). Continuing...")
 

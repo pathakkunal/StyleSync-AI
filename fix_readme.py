@@ -6,14 +6,14 @@ import subprocess
 sys.stdout.reconfigure(encoding='utf-8')
 
 readme_content = """---
-title: MerchFlow AI
+title: StyleSync AI AI AI AI AI
 emoji: 🚀
 colorFrom: blue
 colorTo: indigo
 sdk: docker
 pinned: false
 ---
-# MerchFlow AI
+# StyleSync AI AI AI AI AI
 An AI-powered merchandising agent.
 """
 

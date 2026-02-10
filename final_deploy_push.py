@@ -5,7 +5,7 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
 def deploy():
-    print("⚠️  Ensure you are inside the D:\\Projects\\MerchFlow AI directory before running this!")
+    print("⚠️  Ensure you are inside the D:\\Projects\\StyleSync AI AI AI AI AI directory before running this!")
     
     command = "git push --force space clean_deploy:main"
     print(f"\nRunning: {command} ...")
